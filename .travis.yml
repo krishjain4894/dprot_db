@@ -1,0 +1,73 @@
+language: python
+python:
+- "3.6"
+
+services:
+- postgresql
+
+before_install:
+ - echo code-deploy.csye6225-fall2018-${s3_bucket_tld}.tld
+ - echo csye6225-web-app-${TRAVIS_JOB_NUMBER}.zip
+ - psql -U postgres -c "CREATE USER proteomicsuser WITH PASSWORD 'proteomicspassword';"
+ - psql -U postgres -c "CREATE DATABASE proteomicsdb;"
+ - psql -U postgres -c "ALTER ROLE proteomicsuser SET client_encoding TO 'utf8';"
+ - psql -U postgres -c "ALTER ROLE proteomicsuser SET default_transaction_isolation TO 'read committed';"
+ - psql -U postgres -c "ALTER ROLE proteomicsuser SET timezone TO 'EST';"
+ - psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE proteomicsdb TO proteomicsuser;"
+
+install:
+  - pip3.6 install Django==2.1.5
+  - pip3.6 install django psycopg2
+  - pip3.6 install django-allauth
+  - pip3.6 install pandas
+
+
+deploy:
+- provider: s3
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY
+  local_dir: codedeploy_artifact
+  skip_cleanup: true
+  bucket: code-deploy.csye6225-fall2018-${s3_bucket_tld}.tld
+  region: us-east-1
+  on:
+    branch: master
+
+- provider: codedeploy
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY
+  bucket: code-deploy.csye6225-fall2018-${s3_bucket_tld}.tld
+  key: csye6225-fall2018-${TRAVIS_JOB_NUMBER}.zip
+  bundle_type: zip
+  application: ${application_name}
+  deployment_group: ${deploy_group}
+  region: us-east-1
+  on:
+    branch: master
+
+script:
+ - cd webapp/
+ - ls -lrt
+ - pwd
+
+after_success:
+  - pwd
+  - cd ../..
+  - pwd
+  - ls -ltr
+  - mkdir codedeploy_artifact
+  - cp dprot_db/infrastructure/aws/codedeploy/*.sh ./codedeploy_artifact/
+  - cp dprot_db/infrastructure/aws/codedeploy/*.yml ./codedeploy_artifact/
+  - cd dprot_db/
+  - zip -r csye6225-fall2018.zip ./* >/dev/null
+  - cp csye6225-fall2018.zip ./../codedeploy_artifact/
+  - rm -rf csye6225-fall2018.zip
+  - pwd
+  - cd ..
+  - cd codedeploy_artifact/
+  - zip -r csye6225-fall2018-${TRAVIS_JOB_NUMBER}.zip *.yml *.sh csye6225-fall2018.zip >/dev/null 2>&1
+  - rm -rf csye6225-fall2018.zip *.yml *.sh
+  - pwd
+  - ls -lrt
+  - cd ..
+  - pwd
