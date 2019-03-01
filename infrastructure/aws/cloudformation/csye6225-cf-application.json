@@ -1,0 +1,389 @@
+{
+    "Resources": {
+        "EC2Instance": {
+            "DependsOn": "SecurityGroupforWebApp",
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "AvailabilityZone": "us-east-1c",
+                "SubnetId": {
+                    "Fn::ImportValue": "websubnet3"
+                },
+                "SecurityGroupIds": [
+                    {
+                        "Ref": "SecurityGroupforWebApp"
+                    }
+                ],
+                "ImageId": "ami-9887c6e7",
+                "InstanceType": "t2.micro",
+                "IamInstanceProfile": {
+                    "Ref": "myInstanceProfile"
+                },
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sdj",
+                        "Ebs": {
+                            "VolumeSize": 20,
+                            "DeleteOnTermination": true
+                        }
+                    }
+                ],
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "UserData":{
+               "Fn::Base64":{
+                  "Fn::Join":[
+                     "\n",
+                     [
+                        "#!/bin/bash -xe",
+                        "cd /usr/src",
+                        "sudo yum -y install https://centos7.iuscommunity.org/ius-release.rpm",
+                        "sudo yum install wget -y",
+                        "sudo yum -y install ruby",
+                        "sudo yum -y update",
+                        "sudo yum install python36u -y",
+                        "sudo yum install python36u-pip -y",
+                        "sudo pip3.6 install Django==2.1.5",
+                        "sudo pip3.6 install --upgrade pip",
+                        "sudo pip3.6 install django psycopg2",
+                        "sudo pip3.6 install django-allauth",
+                        "sudo pip3.6 install pandas",
+                        "cd /home/centos",
+                        "wget https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-centos96-9.6-3.noarch.rpm",
+                        "sudo yum -y install pgdg-centos96-9.6-3.noarch.rpm epel-release",
+                        "sudo yum -y update",
+                        "sudo yum install -y postgresql96-server postgresql96-contrib",
+                        "sudo /usr/pgsql-9.6/bin/postgresql96-setup initdb",
+                        "sudo systemctl start postgresql-9.6",
+                        "wget https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install",
+                        "chmod +x ./install",
+                        "sudo ./install auto",
+                        "sudo service codedeploy-agent status",
+                        "sudo service codedeploy-agent start",
+                        "sudo yum -y install R",
+                        "sudo touch /var/.env",
+                        "sudo chmod 777 /var/.env ",
+                        "sudo echo NODE_ENV=dev > /var/.env \n",
+                        "sudo echo DB_USER=proteomcisuser >> /var/.env \n",
+                        "sudo echo DB_PASS=proteomicspasssword >> /var/.env \n",
+                        "sudo echo DB_PORT=5432 >> /var/.env \n",
+                        "sudo echo DB_NAME=proteomicsdb >> /var/.env \n",
+                        {
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "sudo echo S3_BUCKET=",
+                                 {
+                                    "Ref":"S3BucketName"
+                                 },
+                                 " >> /var/.env \n"
+                              ]
+                           ]
+                        },
+                        {
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "sudo echo DB_HOST=",
+                                 {
+                                    "Fn::GetAtt":[
+                                       "DbInstance",
+                                       "Endpoint.Address"
+                                    ]
+                                 },
+                                 " >> /var/.env \n"
+                              ]
+                           ]
+                        },
+                        
+                        {
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "sudo echo DOMAINNAME=",
+                                 {
+                                    "Ref":"DOMAINNAME"
+                                 },
+                                 " >> /var/.env \n"
+                              ]
+                           ]
+                        },
+                        {
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "sudo echo PWDRESETARN=",
+                                 {
+                                    "Ref":"PWDRESETARN"
+                                 },
+                                 " >> /var/.env \n"
+                              ]
+                           ]
+                        },
+                        {
+                           "Fn::Join":[
+                              "",
+                              [
+                                 "sudo echo REGION=",
+                                 {
+                                    "Ref":"REGION"
+                                 },
+                                 " >> /var/.env \n"
+                              ]
+                           ]
+                        }
+                     ]
+                  ]
+               }
+            }
+         }
+      },
+        "myInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Fn::ImportValue": "ec2iamrole"
+                    }
+                ],
+                "InstanceProfileName": "myProfile"
+            }
+        },
+        "myCodeDeployApp": {
+            "Type": "AWS::CodeDeploy::Application",
+            "Properties": {
+                "ApplicationName": "Codeapp",
+                "ComputePlatform": "Server"
+            }
+        },
+        "myDeploymentGroup": {
+            "Type": "AWS::CodeDeploy::DeploymentGroup",
+            "Properties": {
+                "ApplicationName": {
+                    "Ref": "myCodeDeployApp"
+                },
+                "DeploymentGroupName": "csye6225group",
+                "DeploymentStyle": {
+                    "DeploymentType": "IN_PLACE",
+                    "DeploymentOption": "WITHOUT_TRAFFIC_CONTROL"
+                },
+                "ServiceRoleArn": {
+                    "Fn::ImportValue": "codedeployrole"
+                },
+                "Ec2TagFilters": [
+                    {
+                        "Key": "aws:cloudformation:logical-id",
+                        "Value": "EC2Instance",
+                        "Type": "KEY_AND_VALUE"
+                    }
+                ]
+            }
+        },
+        "NewVolume": {
+            "Type": "AWS::EC2::Volume",
+            "Properties": {
+                "Size": "20",
+                "AvailabilityZone": {
+                    "Fn::GetAtt": [
+                        "EC2Instance",
+                        "AvailabilityZone"
+                    ]
+                },
+                "VolumeType": "gp2"
+            }
+        },
+        "MountPoint": {
+            "Type": "AWS::EC2::VolumeAttachment",
+            "Properties": {
+                "InstanceId": {
+                    "Ref": "EC2Instance"
+                },
+                "VolumeId": {
+                    "Ref": "NewVolume"
+                },
+                "Device": "/dev/sdh"
+            }
+        },
+        "SecurityGroupforWebApp": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow http",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "csye6225-webapp"
+                    }
+                ],
+                "VpcId": {
+                    "Fn::ImportValue": "vpcID"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                     {
+                        "IpProtocol": "tcp",
+                        "FromPort": 5000,
+                        "ToPort": 5000,
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 443,
+                        "ToPort": 443,
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "SecurityGroupforRDS": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Db Security Group",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "csye6225-RDS"
+                    }
+                ],
+                "VpcId": {
+                    "Fn::ImportValue": "vpcID"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": 3306,
+                        "ToPort": 3306,
+                        "SourceSecurityGroupId": {
+                            "Ref": "SecurityGroupforWebApp"
+                        }
+                    }
+                ]
+            }
+        },
+        "RDSSecurityGroup": {
+            "Type": "AWS::RDS::DBSecurityGroup",
+            "Properties": {
+                "EC2VpcId": {
+                    "Fn::ImportValue": "vpcID"
+                },
+                "GroupDescription": "RDS Security Group"
+            }
+        },
+        "DbInstance": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "Engine": "postgres",
+                "AllocatedStorage": 100,
+                "DBInstanceClass": "db.t2.medium",
+                "DBInstanceIdentifier": "csye6225-fall2018",
+                "MultiAZ": false,
+                "MasterUsername": "proteomicsuser",
+                "MasterUserPassword": "proteomicspasssword",
+                "PubliclyAccessible": false,
+                "DBName": "proteomicsdb",
+                "VPCSecurityGroups": [
+                    {
+                        "Ref": "SecurityGroupforRDS"
+                    }
+                ],
+                "DBSubnetGroupName": {
+                    "Ref": "myDBSubnetGroup"
+                }
+            }
+        },
+        "myDBSubnetGroup": {
+            "Type": "AWS::RDS::DBSubnetGroup",
+            "Properties": {
+                "DBSubnetGroupDescription": "making a RDS subnet from my VPC",
+                "SubnetIds": [
+                    {
+                        "Fn::ImportValue": "websubnet3"
+                    },
+                    {
+                        "Fn::ImportValue": "websubnet2"
+                    }
+                ]
+            }
+        },
+        "myDynamoDBTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "ID",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "ID",
+                        "KeyType": "HASH"
+                    }
+                ],
+                "TableName": "csye6225",
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": 5,
+                    "WriteCapacityUnits": 5
+                },
+                "TimeToLiveSpecification": {
+					"AttributeName": "ttl",
+    			"Enabled": "TRUE"
+}
+            }
+        },
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Ref": "S3BucketName"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "S3BucketName": {
+            "Type": "String"
+        },
+        "KeyName": {
+            "Type": "String"
+        },
+        "ACCESSKEY": {
+            "Type": "String"
+        },
+        "SECRETKEY": {
+            "Type": "String"
+        },
+
+        "REGION": {
+            "Type": "String"
+        },
+        "PWDRESETARN": {
+            "Type": "String"
+        },
+
+        "DOMAINNAME": {
+        	"Type": "String"
+        }
+    },
+    "Outputs": {
+        "SecurityGrp": {
+            "Description": " Security Group attaching to RDS",
+            "Value": {
+                "Ref": "SecurityGroupforWebApp"
+            },
+            "Export": {
+                "Name": "SecurityGrp"
+            }
+        }
+    }
+}

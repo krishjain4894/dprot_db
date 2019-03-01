@@ -1,0 +1,79 @@
+{	
+  "AWSTemplateFormatVersion":"2010-09-09",
+  "Description":"AWS SERVERLESS CloudFormation Template.",
+  "Parameters": {
+        
+        "lambdaArn1" : {
+            "Description" : "Lambda Function ARN",
+            "Type" : "String"
+        },
+        "S3BucketLambda": {
+            "Type": "String"
+        }
+    },
+	"Resources": {
+		"lambdaArn": {
+			  "Type": "AWS::Lambda::Function",
+			  "DependsOn": "myLambdaRole",
+			  "Properties": {
+			  	"FunctionName": "lambdaArn",
+			  	"Handler": "index.handler",
+			    "Role": { "Fn::GetAtt" : ["myLambdaRole", "Arn"] },
+			    "Code": {
+			      "S3Bucket": {
+                   "Ref": "S3BucketLambda"
+               	 },
+			      "S3Key": "index.js.zip"
+			    },
+			    "Runtime": "nodejs8.10",
+			    "Timeout": 25
+			  }
+
+        },
+		"MySNSTopic":{
+              "Type":"AWS::SNS::Topic",
+              "Properties":{
+                "TopicName":"password_reset",
+                "Subscription":[
+                  {
+                    "Endpoint":{"Fn::GetAtt" : ["lambdaArn", "Arn"] }, "Protocol":"lambda"
+                  }
+                ]
+              }
+        },
+
+       
+        "LambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "Action": "lambda:InvokeFunction",
+              "Principal": "sns.amazonaws.com",
+              "SourceArn": {"Ref": "MySNSTopic"},
+              "FunctionName": {"Fn::GetAtt" : ["lambdaArn", "Arn"] }
+            }
+        },
+        
+        "myLambdaRole":
+        {
+            "Type":"AWS::IAM::Role",
+            "Properties": {
+                "RoleName": "LambdaExecutionRole",
+                "AssumeRolePolicyDocument": {
+
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": ["lambda.amazonaws.com"]
+                        },
+                        "Action": ["sts:AssumeRole"]
+                    }]
+                },
+                "ManagedPolicyArns":["arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+                "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess","arn:aws:iam::aws:policy/AmazonSESFullAccess"]
+            }
+        }
+	
+	}
+}
+

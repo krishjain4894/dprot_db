@@ -1,0 +1,120 @@
+{% load static %}
+<html>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+body {font-family: Arial, Helvetica, sans-serif;}
+
+.navbar {
+  width: 100%;
+  background-color: #5b86cc;
+  overflow: auto;
+}
+
+.navbar a {
+  float: right;
+  padding: 12px;
+  color: white;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.navbar #logo {
+  float: left;
+  padding: 12px;
+  color: white;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+
+.navbar a:hover {
+  background-color: #000;
+}
+
+.active {
+  background-color: #9ea0a3;
+}
+
+@media screen and (max-width: 500px) {
+  .navbar a {
+    float: none;
+    display: block;
+  }
+}
+
+* {box-sizing: border-box;}
+
+input[type=text], select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  margin-top: 6px;
+  margin-bottom: 16px;
+  resize: vertical;
+}
+
+input[type=password] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  margin-top: 6px;
+  margin-bottom: 16px;
+  resize: vertical;
+}
+
+input[type=submit] {
+  background-color: #5b86cc;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[type=submit] {
+  background-color: #5b86cc;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+input[type=submit]:hover {
+  background-color: #9ea0a3;
+}
+
+.container {
+  border-radius: 5px;
+  background-color: #f2f2f2;
+  padding: 20px;
+}
+</style>
+<body>
+
+<div class="navbar">
+  <a id="logo"  href="{% url 'home' %}"><i class="fa fa-fw fa-home"></i>Proteomics Database</a> 
+  <a id="logo"  href="{% url 'dashboard' %}"><i class="fa fa-fw fa-home"></i>Dashboard</a>
+  <a id="logo" class="active" href="{% url 'analysis' %}">Analysis Result</a>
+  <a href="{% url 'logout' %}"><i class="fa fa-fw fa-user"></i>Logout</a>
+
+</div>
+
+
+<div class="container">
+{% if user.is_authenticated %}
+
+{% else %}
+<a href="{% url 'login' %}"><button type="submit" value="Login">Click Here To Log In </button></a>
+{% endif %}
+
+</div>
+
+</body>
+</html> 
+

@@ -1,0 +1,185 @@
+
+{% load static %}
+<html>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+body {font-family: Arial, Helvetica, sans-serif;}
+
+.navbar {
+  width: 100%;
+  background-color: #5b86cc;
+  overflow: auto;
+}
+
+.navbar a {
+  float: right;
+  display: block;
+  padding: 12px;
+  color: white;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.navbar #logo {
+  float: left;
+  padding: 12px;
+  color: white;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.navbar a:hover {
+  background-color: #000;
+}
+
+.active {
+  background-color: #9ea0a3;
+}
+
+@media screen and (max-width: 500px) {
+  .navbar a {
+    float: none;
+    display: block;
+  }
+}
+
+* {box-sizing: border-box;}
+
+input[type=text], select, textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  margin-top: 6px;
+  margin-bottom: 16px;
+  resize: vertical;
+}
+
+input[type=password] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  margin-top: 6px;
+  margin-bottom: 16px;
+  resize: vertical;
+}
+
+input[type=submit] {
+  background-color: #5b86cc;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[type=submit] {
+  background-color: #5b86cc;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+input[type=submit]:hover {
+  background-color: #9ea0a3;
+}
+
+.container {
+  border-radius: 5px;
+  background-color: #f2f2f2;
+  padding: 20px;
+}
+
+#experiments {
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#experiments td, #experiments th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+#experiments tr:nth-child(even){background-color: #f2f2f2;}
+
+#experiments tr:hover {background-color: #ddd;}
+
+#experiments th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: 5b86cc;
+  color: white;
+}
+</style>
+<body>
+
+<div class="navbar">
+  <a id ='logo' href="{% url 'home' %}"><i class="fa fa-fw fa-home"></i>Proteomics Database</a> 
+  <a id ='logo' href="{% url 'dashboard' %}" class="active"><i class="fa fa-fw fa-home"></i>Dashboard</a>
+
+  <a href="{% url 'logout' %}"><i class="fa fa-fw fa-user"></i>Logout</a>
+  <a href="#">Welcome {{ request.user.username }} !</a>
+</div>
+
+
+<div class="container">
+{% if user.is_authenticated %}
+<a href="{% url 'upload' %}"><button type="submit" value="upload experiment">
+	<b>Upload New Experiment</b> 
+</button>
+</a>
+
+<form method="post" action='dashboard/experiment/delete/'>
+
+{% csrf_token %}
+<br>
+<label for="exps"><b>Uploaded Experiments</b></label>
+<br><br>
+<table id="experiments">
+		<tr>
+  		
+			<th>Experiment Name</th>
+			<th>Experiment Cell Line</th>
+			<th>Experiment Treatment</th>
+			<th>Experiment Data</th>
+			<th>Experiment Status</th>
+			<th>Experiment Date</th>
+			<th>Added By</th>
+		</tr>
+		{% for obj in experiments %}
+		<tr>
+			<td>{{ obj.name }}</td>
+			<td>{{ obj.cell_line }}</td>
+			<td>{{ obj.treatment }}</td>
+      <td><a href="file:///\home\ch207814\proteomicsproject\experiments\{{ obj.name }}"  download="{{ obj.name }}">{{ obj.name }}</a></td>
+			<td>{{ obj.status }}</td>
+			<td>{{ obj.published_date }}</td>
+			<td>{{ obj.user }}</td>
+			<td><button type="submit" value="delete data"   onclick="javascript: form.action='{% url 'delete' %}?experiment={{ obj.experiment_id }}';"> Delete</button></td>
+			<td><button type="submit" value="analysis data" onclick="javascript: form.action='{% url 'analysis' %}?experiment={{ obj.experiment_id }}';">Analyze</button></td>
+		</tr>
+				
+			
+	  
+		{% endfor %}
+
+
+</table>
+
+</form>
+{% else %}
+<a href="{% url 'login' %}"><button type="submit" value="Login">Click Here To Log In </button></a>
+{% endif %}
+</div>
+
+</body>
+</html> 
+
