@@ -12,6 +12,8 @@ sudo yum install zip unzip -y
 
 sudo su -
 
+sudo systemctl start postgresql
+
 psql -U postgres -c "CREATE USER proteomicsuser WITH PASSWORD 'proteomicspassword';"
 
 psql -U postgres -c "CREATE DATABASE proteomicsdb;"
@@ -26,7 +28,6 @@ psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE proteomicsdb TO proteomics
 
 #sudo postgresql-setup initdb
 
-sudo systemctl restart postgresql
 
 #sudo systemctl status postgresql
 
