@@ -12,6 +12,9 @@ sudo yum install zip unzip -y
 
 sudo su -
 
+sudo yum install postgresql-server postgresql-contrib
+
+sudo postgresql-setup initdb
 sudo systemctl start postgresql
 
 psql -U postgres -c "CREATE USER proteomicsuser WITH PASSWORD 'proteomicspassword';"
